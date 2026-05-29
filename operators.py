@@ -6,6 +6,10 @@ from bpy.props import (
 )
 from . import helpers
 
+
+# pyright: reportInvalidTypeForm=false
+
+
 def fracture(objects, modifier_name, translation, socket_toggle, cleanup_toggle):
     
     allFracs = []
