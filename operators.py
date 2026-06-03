@@ -6,7 +6,7 @@ from bpy.props import (
 )
 from . import helpers
 
-
+# Disable PyLance warnings about declaring parameters in classes with the unusual Blender syntax
 # pyright: reportInvalidTypeForm=false
 
 
@@ -18,16 +18,24 @@ def fracture(objects, modifier_name, translation, socket_toggle, cleanup_toggle)
         
         ## High-level functions, see helpers.py ##
         
+        objname = object.name
+
         dupObj = helpers.duplicate(object)
         helpers.applyModifiers(dupObj, modifier_name)
+        
+        if dupObj.parent is not None:
+            objname = object.parent.name
+            helpers.unparent(dupObj)
+
         helpers.translate(dupObj, translation)
+
         fractures = helpers.separate(dupObj)
         
         allFracs.extend(fractures)
 
         for i, frac in enumerate(fractures):
             letter = helpers.numbersToLetters(i)
-            helpers.rename(frac, f"{object.name}_Frac_{letter}")
+            helpers.rename(frac, f"{objname}_Frac_{letter}")
 
             if socket_toggle:
                 socket = helpers.addSocket(frac)

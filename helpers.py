@@ -32,6 +32,22 @@ def duplicate(object):
     with bpy.context.temp_override(selected_objects=obj, active_object=object):
         bpy.ops.object.make_links_data(type='MODIFIERS')
 
+    #NOTE: Solution from someone else
+    for modifier in active_object.modifiers:
+        # Om modifiern finns sedan tidigare återanvänder vi den
+        modifier_copy = obj.modifiers.get(modifier.name, None)
+        
+        # Annars skapar vi en ny
+        if not modifier_copy:
+            modifier_copy = obj.modifiers.new(modifier.name, modifier.type)
+        
+        properties = [p.identifier for p in modifier.bl_rna.properties
+                        if not p.is_readonly]
+        
+        for prop in properties:
+            setattr(modifier_copy, prop, getattr(modifier, prop))
+
+    
     bpy.context.collection.objects.link(obj)
 
     return obj
@@ -40,26 +56,17 @@ def duplicate(object):
 def rename(object, name):
     object.name = name
 
-#FUNCTION: 0 = A, 1 = B, 2 = C, (...), 27 = AA, 28 = AB, 29 = AC, ...
-#TODO: I don't fully understand divmod(), chr(), and ord(). Need to do further reading.
-def numbersToLetters(number):
-    letter = ""
+#FUNCTION: 0 = A, 1 = B, 2 = C, (...), 26 = AA, 27 = AB, 28 = AC, ...
+def numbersToLetters(number: int) -> str:
 
-    #convert from 0-based to 1-based index
-    number += 1
+    cycle, remainder = divmod(number, 26)
+
+    letter = chr(ord('A') + remainder)
     
-
-    while number > 0:
-        # Convert from 0-based to 1-based index
-        number -= 1
-
-        # Get remainder and next number
-        number, remainder = divmod(number, 26)
-
-        # Convert 0-25 into A-Z
-        letter = chr(ord('A') + remainder)
-
-    return letter
+    if cycle == 0:
+        return letter
+    
+    return numbersToLetters(cycle - 1) + letter
 
 #FUNCTION: Apply all modifiers until specified modifier
 #TODO: Remove Apply Modifier operator
@@ -76,6 +83,14 @@ def applyModifiers(object, modifier_name):
     for mod in object.modifiers[:final_mod_index]:
         # NOTE: Replacing this with a direct call to apply the modifiers requires to dig into the dependency graph. A complex topic,how blender handles modifiers, shape keys and other data. Stick with the operator for now. 
         bpy.ops.object.modifier_apply(modifier=mod.name)
+
+def unparent(object):
+    origin = object.parent.location
+    
+    object.parent = None
+    object.location = origin
+
+    return
 
 #FUNCTION: Translate object
 def translate(object, translation):
